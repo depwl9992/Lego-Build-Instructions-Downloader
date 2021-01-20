@@ -1,9 +1,6 @@
-#!/bin/bash
-
+#!/bin/sh
 # https://stackoverflow.com/a/10520718/1265581
 STR=ABCD-1234
-STR2=AAAA,BBBB,CCCC,DDDD
-
 var1=${STR%-*} # Posix delete delimiter and shortest substring after it.
 var2=${STR#*-} # Posix delete shortest substring before and including delimiter.
 
@@ -13,10 +10,30 @@ echo "$var2"
 wget https://brickset.com/exportscripts/instructions -O brickset.csv
 
 while IFS= read -r line; do
-  col2e=${line#*,} # Delete only the substring before and including first instance of delimiter (non-greedy).
-  col2=${col2e%%,*} # Delete first instance of delimiter and all substrings thereafter (greedy).
-  col2q=$(eval echo $col2) # Strips double quotes
-  printf '%s\n' "$col2q"
-  wget --limit-rate=100k --wait=5 --no-clobber $col2q # get file and save to current directory; limit to 100kbps and do not overwrite files that already exist.
-  sleep 5 # --wait=5 in wget doesn't work, as this only pauses between multiple requests of one wget command. We could let wget perform the pause by writing all PDF urls to a second text file and passing that file into wget via the -i option.
+  col1=${line%%,*}
+  col2e=${line#*,}
+  col2=${col2e%%,*}
+
+  # Strip out double quotes or wget won't work.
+  col1q=$(eval echo $col1)
+  col2q=$(eval echo $col2)
+
+  file="${col1q}.pdf"
+  url="${col2q}"
+
+  echo "Downloading $url to $file..."
+  # Do not overwrite files if they already exist.
+  if [ -f "$file" ]; then
+    echo "$file already exists."
+  else
+    # Limits to 100kbps because we're nice.
+    is_200_ok=$(wget --server-response --limit-rate=100k --no-clobber $url -O $file 2>&1 | grep -c 'HTTP/1.1 200 OK')
+    if [ $is_200_ok = 1 ]; then # Must be = (sh), not == (bash) if we run with sh. https://stackoverflow.com/a/3411105/1265581
+      echo "Saved $file"
+    else
+      echo "Deleting $file because it wasn't downloaded."
+      rm $file
+    fi
+  fi
+  sleep 5 # Avoid DoS-ing lego.com. Also because we're nice.
 done < brickset.csv
