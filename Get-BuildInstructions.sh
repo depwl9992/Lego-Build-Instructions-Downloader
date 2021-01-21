@@ -9,6 +9,11 @@ echo "$var2"
 
 wget https://brickset.com/exportscripts/instructions -O brickset.csv
 
+folder=./instructions/
+if [ ! -d "$folder" ]; then
+  mkdir $folder
+fi
+
 while IFS= read -r line; do
   col1=${line%%,*}
   col2e=${line#*,}
@@ -18,7 +23,7 @@ while IFS= read -r line; do
   col1q=$(eval echo $col1)
   col2q=$(eval echo $col2)
 
-  file="${col1q}.pdf"
+  file="${folder}${col1q}.pdf"
   url="${col2q}"
 
   echo "Downloading $url to $file..."
@@ -27,8 +32,8 @@ while IFS= read -r line; do
     echo "Skipping because $file already exists."
   else
     # Limits to 100kbps because we're nice.
-    is_200_ok=$(wget --server-response --limit-rate=100k --no-clobber $url -O $file 2>&1 | grep -c 'HTTP/1.1 200 OK')
-    if [ $is_200_ok = 1 ]; then # Must be = (sh), not == (bash) if we run with sh. https://stackoverflow.com/a/3411105/1265581
+    is_200_ok=$(wget --server-response --limit-rate=500k --no-clobber $url -O $f                                                                                                                                                             ile 2>&1 | grep -c 'HTTP/1.1 200 OK')
+    if [ $is_200_ok = 1 ]; then # Must be = (sh), not == (bash) if we run with s                                                                                                                                                             h. https://stackoverflow.com/a/3411105/1265581
       echo "Saved $file"
       sleep 5 # Avoid DoS-ing lego.com. Also because we're nice.
     else
@@ -38,3 +43,5 @@ while IFS= read -r line; do
     fi
   fi
 done < brickset.csv
+
+rm brickset.csv
